@@ -1,0 +1,14 @@
+env/
+.DS_Store
+**/__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+data/processed/graph_cache/
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.fls
+paper/*.fdb_latexmk
+paper/ieee_paper.html
