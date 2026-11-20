@@ -29,11 +29,16 @@ An end-to-end Deep Graph Learning & Computational Drug Discovery (CADD) engineer
 ```
 course_project/
 ├── README.md                          # Quickstart, benchmark summary & usage
+├── app.py                             # FastAPI backend server for the 4-tab demo UI
 ├── PROJECT_REPORT.md                  # Full Engineering Semester Project Report
 ├── AUDIT_REPORT.md                    # 13-point code, math & ML audit report
 ├── PROJECT_GUIDE.md                   # Theoretical handbook
+├── GLOSSARY.md                        # Visual terminology & concept glossary
 ├── PRESENTATION_DECK.md               # Slide deck & faculty viva Q&A
+├── deliverables/                      # Generated PowerPoint presentation & speaker scripts
+├── paper/                             # IEEE conference research paper & LaTeX figures
 ├── requirements.txt                   # Python dependencies
+├── web/                               # Light-theme 4-tab demo UI (index.html, styles.css, app.js)
 ├── data/
 │   ├── raw/unlabeled_molecules.csv    # 5,000 leakage-free ZINC250k SMILES
 │   └── processed/                     # admet_multitask_dataset.csv, dataset_stats.json & graph cache
@@ -54,7 +59,8 @@ course_project/
 ├── notebooks/
 │   └── 01_explore_and_demo.ipynb      # Interactive 6-part demonstration & XAI notebook
 └── tests/
-    └── test_course_project.py         # 14-test unit & integration suite
+    ├── test_course_project.py         # 14-test ML/chemistry unit & integration suite
+    └── test_web_api.py                # 6-test FastAPI 4-tab demo backend integration suite
 ```
 
 ---
@@ -64,10 +70,13 @@ course_project/
 Run all commands from the `course_project/` root directory using the project virtual environment (`./env/bin/python` or your active Python 3.12 environment):
 
 ```bash
-# 1. Run all 14 unit & integration tests
+# 1. Launch Interactive 4-Tab Demo Web UI (http://127.0.0.1:8000)
+./env/bin/python app.py
+
+# 2. Run all 20 unit & integration tests
 PYTHONPATH=. ./env/bin/python -m unittest discover -s tests -v
 
-# 2. Run the full end-to-end pipeline (Stages 0 -> 1 -> 2 -> 4 -> 3)
+# 3. Run the full end-to-end pipeline (Stages 0 -> 1 -> 2 -> 4 -> 3)
 ./env/bin/python scripts/run_all.py
 
 # Or run individual stages:

@@ -10,7 +10,7 @@ from .chemistry import (
     standardize_smiles,
     suppress_rdkit_warnings,
 )
-from .explainability import compute_atom_saliency, render_saliency_figure
+from .explainability import compute_atom_saliency, render_mol_png_base64, render_saliency_figure
 from .metrics import evaluate_multitask_predictions, format_metrics_markdown
 from .seed import get_device, set_seed
 from .splitting import bemis_murcko_scaffold_split, get_murcko_scaffold
@@ -30,5 +30,6 @@ __all__ = [
     "evaluate_multitask_predictions",
     "format_metrics_markdown",
     "compute_atom_saliency",
+    "render_mol_png_base64",
     "render_saliency_figure",
 ]

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADMET GraphGPS Workbench</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand-group">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <h1 class="brand-title">ADMET GraphGPS Workbench</h1>
+          <p class="brand-subtitle">Self-Supervised 2D+3D Hybrid Graph Transformer &amp; Multi-Objective Lead Optimizer</p>
+        </div>
+      </div>
+      <div class="status-group" aria-label="Model runtime status">
+        <span class="status-dot" id="health-dot" aria-hidden="true"></span>
+        <span class="status-text" id="health-text">Loading model...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="tabs-container">
+      <div class="tablist-wrap">
+        <div
+          class="tablist"
+          role="tablist"
+          focusgroup="tablist nomemory"
+          aria-label="Workbench sections"
+        >
+          <button
+            type="button"
+            role="tab"
+            id="tab-profiler"
+            aria-selected="true"
+            tabindex="0"
+            focusgroupstart
+            data-panel="panel-profiler"
+          >ADMET Profiler</button>
+          <button
+            type="button"
+            role="tab"
+            id="tab-saliency"
+            aria-selected="false"
+            tabindex="-1"
+            data-panel="panel-saliency"
+          >XAI Saliency</button>
+          <button
+            type="button"
+            role="tab"
+            id="tab-optimizer"
+            aria-selected="false"
+            tabindex="-1"
+            data-panel="panel-optimizer"
+          >Pareto Optimizer</button>
+          <button
+            type="button"
+            role="tab"
+            id="tab-benchmarks"
+            aria-selected="false"
+            tabindex="-1"
+            data-panel="panel-benchmarks"
+          >Benchmarks &amp; Ablation</button>
+        </div>
+      </div>
+
+      <div class="panels-stage">
+        <!-- TAB 1: ADMET PROFILER -->
+        <div role="tabpanel" id="panel-profiler" aria-labelledby="tab-profiler" tabindex="0">
+          <div class="panel-body">
+            <section class="card control-card" aria-label="Molecule input">
+              <form id="profiler-form" class="inline-form" novalidate>
+                <div class="field grow">
+                  <label for="smiles-input">Molecule SMILES String</label>
+                  <span id="smiles-hint" class="hint">Enter canonical or isomeric SMILES without whitespace (e.g., CC(=O)Oc1ccccc1C(=O)O).</span>
+                  <div class="input-row">
+                    <input
+                      type="text"
+                      id="smiles-input"
+                      name="smiles"
+                      required
+                      pattern="\S+"
+                      spellcheck="false"
+                      autocomplete="off"
+                      aria-describedby="smiles-hint"
+                      aria-invalid="false"
+                      data-error="smiles-error"
+                      value="CC(=O)Oc1ccccc1C(=O)O"
+                    >
+                    <button type="submit" class="btn-primary" id="predict-btn">Analyze Molecule</button>
+                  </div>
+                  <div id="smiles-error" class="error-msg">Error: Enter a valid non-empty SMILES string without spaces.</div>
+                </div>
+              </form>
+              <div class="preset-bar">
+                <span class="preset-label">Presets:</span>
+                <div class="preset-chips" id="profiler-presets"></div>
+              </div>
+              <div class="server-alert" id="profiler-alert" hidden></div>
+            </section>
+
+            <div class="grid-two-col">
+              <!-- Left column: Structure & 3D geometry -->
+              <section class="card">
+                <div class="card-header">
+                  <h2>2D Structure &amp; 3D Conformer Topology</h2>
+                  <span class="badge badge-neutral" id="predict-latency">-- ms</span>
+                </div>
+                <div class="mol-frame">
+                  <img id="mol-image" alt="2D chemical structure rendering" src="">
+                </div>
+                <div class="smiles-copy-bar">
+                  <code id="canon-smiles" class="mono-truncate">--</code>
+                  <button type="button" class="btn-secondary btn-sm" id="copy-smiles-btn">Copy</button>
+                </div>
+                <dl class="kv-grid" id="graph-meta">
+                  <div><dt>Formula</dt><dd id="meta-formula">--</dd></div>
+                  <div><dt>Heavy Atoms / Bonds</dt><dd id="meta-atoms-bonds">--</dd></div>
+                  <div class="full-span"><dt>Bemis-Murcko Scaffold</dt><dd class="mono" id="meta-scaffold">--</dd></div>
+                </dl>
+                <div class="sub-divider"></div>
+                <h3 class="sub-heading">ETKDGv3 Global 3D Shape Descriptors</h3>
+                <div class="geom-grid">
+                  <div class="mini-stat"><span>NPR1</span><strong id="geom-npr1">--</strong></div>
+                  <div class="mini-stat"><span>NPR2</span><strong id="geom-npr2">--</strong></div>
+                  <div class="mini-stat"><span>Asphericity</span><strong id="geom-asph">--</strong></div>
+                  <div class="mini-stat"><span>Radius of Gyration</span><strong id="geom-rog">--</strong></div>
+                </div>
+                <div class="action-links">
+                  <button type="button" class="btn-secondary" id="goto-xai-btn">Inspect Atom Saliency</button>
+                  <button type="button" class="btn-secondary" id="goto-opt-btn">Optimize Analogues</button>
+                </div>
+              </section>
+
+              <!-- Right column: 5 ADMET Endpoints + MedChem -->
+              <section class="card">
+                <div class="card-header">
+                  <h2>Multi-Objective ADMET Profile</h2>
+                  <span class="badge badge-accent">SSL-GraphGPS</span>
+                </div>
+                <div class="metrics-stack" id="admet-metrics">
+                  <div class="metric-row">
+                    <div class="metric-head">
+                      <span class="metric-name">Oral Bioavailability P(F &ge; 20%)</span>
+                      <div class="metric-right">
+                        <strong class="metric-val" id="val-bio">--</strong>
+                        <span class="badge" id="tag-bio">--</span>
+                      </div>
+                    </div>
+                    <div class="meter-track"><div class="meter-fill" id="bar-bio"></div></div>
+                  </div>
+
+                  <div class="metric-row">
+                    <div class="metric-head">
+                      <span class="metric-name">Blood-Brain Barrier (BBB) Permeability</span>
+                      <div class="metric-right">
+                        <strong class="metric-val" id="val-bbb">--</strong>
+                        <span class="badge" id="tag-bbb">--</span>
+                      </div>
+                    </div>
+                    <div class="meter-track"><div class="meter-fill" id="bar-bbb"></div></div>
+                  </div>
+
+                  <div class="metric-row">
+                    <div class="metric-head">
+                      <span class="metric-name">hERG Cardiotoxicity Hazard</span>
+                      <div class="metric-right">
+                        <strong class="metric-val" id="val-herg">--</strong>
+                        <span class="badge" id="tag-herg">--</span>
+                      </div>
+                    </div>
+                    <div class="meter-track"><div class="meter-fill" id="bar-herg"></div></div>
+                  </div>
+
+                  <div class="metric-row">
+                    <div class="metric-head">
+                      <span class="metric-name">Drug-Likeness (QED)</span>
+                      <div class="metric-right">
+                        <strong class="metric-val" id="val-qed">--</strong>
+                        <span class="badge badge-neutral" id="audit-qed">RDKit: --</span>
+                      </div>
+                    </div>
+                    <div class="meter-track"><div class="meter-fill" id="bar-qed"></div></div>
+                  </div>
+
+                  <div class="metric-row">
+                    <div class="metric-head">
+                      <span class="metric-name">Synthetic Accessibility (SAScore 1&ndash;10)</span>
+                      <div class="metric-right">
+                        <strong class="metric-val" id="val-sa">--</strong>
+                        <span class="badge badge-neutral" id="audit-sa">RDKit: --</span>
+                      </div>
+                    </div>
+                    <div class="meter-track"><div class="meter-fill" id="bar-sa"></div></div>
+                  </div>
+                </div>
+
+                <div class="sub-divider"></div>
+                <div class="card-header compact">
+                  <h3 class="sub-heading">Medicinal Chemistry Gates (Lipinski Ro5 &amp; PAINS)</h3>
+                  <div class="pill-pair">
+                    <span class="badge" id="badge-lipinski">Lipinski: --</span>
+                    <span class="badge" id="badge-pains">PAINS: --</span>
+                  </div>
+                </div>
+                <div class="medchem-grid">
+                  <div class="mini-stat"><span>Mol. Weight</span><strong id="mc-mw">--</strong></div>
+                  <div class="mini-stat"><span>cLogP</span><strong id="mc-logp">--</strong></div>
+                  <div class="mini-stat"><span>HBD / HBA</span><strong id="mc-hb">--</strong></div>
+                  <div class="mini-stat"><span>TPSA (A&sup2;)</span><strong id="mc-tpsa">--</strong></div>
+                  <div class="mini-stat"><span>Rot. Bonds</span><strong id="mc-rot">--</strong></div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: XAI SALIENCY -->
+        <div role="tabpanel" id="panel-saliency" aria-labelledby="tab-saliency" hidden="until-found">
+          <div class="panel-body">
+            <section class="card control-card" aria-label="Explainability controls">
+              <form id="saliency-form" class="inline-form wrap" novalidate>
+                <div class="field grow">
+                  <label for="xai-smiles-input">Target Molecule SMILES</label>
+                  <span id="xai-smiles-hint" class="hint">Highlight atom-level Input x Gradient sensitivity for any predicted endpoint.</span>
+                  <input
+                    type="text"
+                    id="xai-smiles-input"
+                    name="xai_smiles"
+                    required
+                    pattern="\S+"
+                    spellcheck="false"
+                    autocomplete="off"
+                    aria-describedby="xai-smiles-hint"
+                    aria-invalid="false"
+                    data-error="xai-smiles-error"
+                    value="CC(=O)Oc1ccccc1C(=O)O"
+                  >
+                  <div id="xai-smiles-error" class="error-msg">Error: Enter a valid non-empty SMILES string without spaces.</div>
+                </div>
+                <div class="field select-field">
+                  <label for="xai-task">Target Endpoint</label>
+                  <span class="hint">Select prediction head.</span>
+                  <select id="xai-task" name="task">
+                    <option value="herg" selected>hERG Cardiotoxicity</option>
+                    <option value="bbb">BBB Permeability</option>
+                    <option value="bioavailability">Oral Bioavailability</option>
+                    <option value="qed">QED Drug-Likeness</option>
+                    <option value="sascore">Synthetic Accessibility</option>
+                  </select>
+                </div>
+                <div class="field submit-align">
+                  <button type="submit" class="btn-primary" id="xai-btn">Compute Attribution</button>
+                </div>
+              </form>
+              <div class="preset-bar">
+                <span class="preset-label">Presets:</span>
+                <div class="preset-chips" id="xai-presets"></div>
+              </div>
+              <div class="server-alert" id="xai-alert" hidden></div>
+            </section>
+
+            <div class="grid-two-col">
+              <section class="card">
+                <div class="card-header">
+                  <h2>Atom Attribution Map</h2>
+                  <span class="badge badge-accent" id="xai-pred-badge">Pred: --</span>
+                </div>
+                <div class="mol-frame tall">
+                  <img id="xai-image" alt="Molecule with gradient attribution highlighted atoms" src="">
+                </div>
+                <div class="saliency-legend">
+                  <span>0.00 Low</span>
+                  <div class="legend-ramp" aria-hidden="true"></div>
+                  <span>0.35 Highlight Threshold &rarr; 1.00 Peak Attribution</span>
+                </div>
+                <p class="interp-note" id="xai-interpretation">Run attribution to inspect structural drivers.</p>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <h2>Top Contributing Heavy Atoms</h2>
+                  <span class="badge badge-neutral">Input &times; Gradient</span>
+                </div>
+                <div tabindex="0" role="region" aria-labelledby="xai-table-cap" class="table-wrapper">
+                  <table class="data-table xai-table">
+                    <caption id="xai-table-cap" class="sr-caption">Top-8 heavy atoms ranked by normalized gradient attribution</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Atom</th>
+                        <th scope="col">Element</th>
+                        <th scope="col">Degree</th>
+                        <th scope="col">Charge</th>
+                        <th scope="col">Aromatic</th>
+                        <th scope="col">In Ring</th>
+                        <th scope="col">Score</th>
+                      </tr>
+                    </thead>
+                    <tbody id="xai-table-body"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: PARETO OPTIMIZER -->
+        <div role="tabpanel" id="panel-optimizer" aria-labelledby="tab-optimizer" hidden="until-found">
+          <div class="panel-body">
+            <section class="card control-card" aria-label="Lead optimization controls">
+              <form id="optimize-form" class="opt-form" novalidate>
+                <div class="field grow">
+                  <label for="opt-smiles-input">Seed Lead SMILES</label>
+                  <span id="opt-smiles-hint" class="hint">Mutates seed via 23 SMIRKS + BRICS recombination with PAINS &amp; Lipinski filters.</span>
+                  <input
+                    type="text"
+                    id="opt-smiles-input"
+                    name="opt_smiles"
+                    required
+                    pattern="\S+"
+                    spellcheck="false"
+                    autocomplete="off"
+                    aria-describedby="opt-smiles-hint"
+                    aria-invalid="false"
+                    data-error="opt-smiles-error"
+                    value="CC(=O)Oc1ccccc1C(=O)O"
+                  >
+                  <div id="opt-smiles-error" class="error-msg">Error: Enter a valid non-empty seed SMILES string.</div>
+                </div>
+                <div class="field compact-select">
+                  <label for="opt-mode">BBB Objective</label>
+                  <span class="hint">Target tissue profile.</span>
+                  <select id="opt-mode" name="mode">
+                    <option value="peripheral" selected>Peripheral (Low BBB)</option>
+                    <option value="cns">CNS (High BBB)</option>
+                    <option value="neutral">Neutral (4-Obj)</option>
+                  </select>
+                </div>
+                <div class="field compact-select">
+                  <label for="opt-gens">Generations</label>
+                  <span class="hint">Evolution depth.</span>
+                  <select id="opt-gens" name="generations">
+                    <option value="1">1 Generation</option>
+                    <option value="2" selected>2 Generations</option>
+                  </select>
+                </div>
+                <div class="field compact-select">
+                  <label for="opt-pop">Pool / Gen</label>
+                  <span class="hint">Candidates per step.</span>
+                  <select id="opt-pop" name="max_analogues">
+                    <option value="20">20</option>
+                    <option value="30" selected>30</option>
+                    <option value="40">40</option>
+                  </select>
+                </div>
+                <div class="field compact-select">
+                  <label for="opt-sim">Min Tanimoto</label>
+                  <span class="hint">Seed similarity gate.</span>
+                  <select id="opt-sim" name="min_similarity">
+                    <option value="0.25">0.25</option>
+                    <option value="0.35" selected>0.35</option>
+                    <option value="0.50">0.50</option>
+                  </select>
+                </div>
+                <div class="field submit-align">
+                  <button type="submit" class="btn-primary" id="opt-btn">Run Evolution</button>
+                </div>
+              </form>
+              <div class="preset-bar">
+                <span class="preset-label">Seed Presets:</span>
+                <div class="preset-chips" id="opt-presets"></div>
+              </div>
+              <div class="server-alert" id="opt-alert" hidden></div>
+            </section>
+
+            <div class="kpi-strip">
+              <div class="kpi-card"><span>Valid Analogues Explored</span><strong id="kpi-total">--</strong></div>
+              <div class="kpi-card"><span>Pareto Front-1 Solutions</span><strong id="kpi-front1">--</strong></div>
+              <div class="kpi-card"><span>Best Composite Desirability</span><strong id="kpi-best">--</strong></div>
+              <div class="kpi-card"><span>Evolution Runtime</span><strong id="kpi-time">--</strong></div>
+            </div>
+
+            <div class="grid-two-col">
+              <section class="card">
+                <div class="card-header">
+                  <h2>Interactive Pareto Frontier (Bioavailability vs. hERG)</h2>
+                  <span class="badge badge-neutral">Click any point to inspect</span>
+                </div>
+                <div class="svg-plot-wrap">
+                  <svg id="pareto-svg" viewBox="0 0 560 340" role="img" aria-label="Pareto frontier scatter plot of hERG hazard versus bioavailability"></svg>
+                </div>
+                <div class="plot-legend">
+                  <span><i class="dot dot-seed"></i>Seed Lead</span>
+                  <span><i class="dot dot-f1"></i>Pareto Front-1 (Non-Dominated)</span>
+                  <span><i class="dot dot-dom"></i>Dominated (Front &ge; 2)</span>
+                </div>
+                <div class="inspector-box" id="pareto-inspector">
+                  <div class="inspector-head">
+                    <span class="badge badge-neutral" id="insp-rank">Select point</span>
+                    <code class="mono-truncate" id="insp-smiles">--</code>
+                  </div>
+                  <p class="inspector-metrics" id="insp-metrics">Click or hover a point on the Pareto scatter plot to inspect exact ADMET scores.</p>
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <h2>Seed vs. Top Pareto-Optimal Analogues</h2>
+                  <span class="badge badge-accent">PAINS-Free &amp; Lipinski Valid</span>
+                </div>
+                <div class="analogue-grid" id="opt-top-cards"></div>
+              </section>
+            </div>
+
+            <section class="card">
+              <div class="card-header">
+                <h2>Top Ranked Candidate Analogues (NSGA-II Non-Dominated Sort)</h2>
+                <span class="badge badge-neutral">Sorted by Pareto Front &amp; Desirability</span>
+              </div>
+              <div tabindex="0" role="region" aria-labelledby="opt-table-cap" class="table-wrapper">
+                <table class="data-table opt-table">
+                  <caption id="opt-table-cap" class="sr-caption">Top 15 evolved chemical analogues ranked by Pareto front and composite desirability</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Candidate</th>
+                      <th scope="col">Front</th>
+                      <th scope="col">Bioavail (%)</th>
+                      <th scope="col">hERG</th>
+                      <th scope="col">BBB</th>
+                      <th scope="col">QED (P / RD)</th>
+                      <th scope="col">SA (P / RD)</th>
+                      <th scope="col">Sim</th>
+                      <th scope="col">Desirability</th>
+                      <th scope="col">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="opt-table-body"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- TAB 4: BENCHMARKS & ABLATION -->
+        <div role="tabpanel" id="panel-benchmarks" aria-labelledby="tab-benchmarks" hidden="until-found">
+          <div class="panel-body">
+            <div class="kpi-strip">
+              <div class="kpi-card"><span>Standardized Dataset</span><strong id="bm-total">--</strong></div>
+              <div class="kpi-card"><span>Disjoint Murcko Scaffolds</span><strong id="bm-scaffolds">--</strong></div>
+              <div class="kpi-card"><span>Held-Out Macro ROC-AUC</span><strong id="bm-macro-auc">--</strong></div>
+              <div class="kpi-card"><span>SSL Gain vs. Scratch</span><strong id="bm-ssl-gain">--</strong></div>
+            </div>
+
+            <section class="card">
+              <div class="card-header">
+                <h2>Held-Out Unseen-Scaffold Test Benchmark (n = 502)</h2>
+                <span class="badge badge-accent">Zero Scaffold / SMILES Overlap</span>
+              </div>
+              <div tabindex="0" role="region" aria-labelledby="bm-table-cap" class="table-wrapper">
+                <table class="data-table bm-table">
+                  <caption id="bm-table-cap" class="sr-caption">Multi-model benchmark across Bioavailability, BBB, hERG, QED, and SAScore</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Model</th>
+                      <th scope="col">Bioavail. ROC-AUC</th>
+                      <th scope="col">BBB ROC-AUC</th>
+                      <th scope="col">hERG ROC-AUC</th>
+                      <th scope="col">Macro ROC-AUC</th>
+                      <th scope="col">QED R&sup2; (MAE)</th>
+                      <th scope="col">SAScore R&sup2; (MAE)</th>
+                      <th scope="col">Composite Score</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bm-table-body"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <h2>Verified Experimental Figures &amp; Architecture Diagrams</h2>
+                <span class="badge badge-neutral">Generated Directly from Test Split</span>
+              </div>
+              <div class="gallery-grid" id="benchmark-gallery"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

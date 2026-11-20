@@ -1,9 +1,10 @@
 """
 explainability.py — Atom-Level Gradient Saliency & Substructure Attribution (XAI)
 """
+import base64
 import io
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -69,6 +70,46 @@ def compute_atom_saliency(
         model.train()
 
     return mol, np.clip(norm_scores, 0.0, 1.0), pred_summary
+
+
+def render_mol_png_base64(
+    mol: Chem.Mol,
+    scores: Optional[np.ndarray] = None,
+    width: int = 480,
+    height: int = 340,
+) -> str:
+    """Render an RDKit 2D molecule (with optional saliency highlights) as a base64 PNG data URI."""
+    drawer = rdMolDraw2D.MolDraw2DCairo(width, height)
+    opts = drawer.drawOptions()
+    opts.padding = 0.12
+
+    mol_copy = Chem.Mol(mol)
+    Chem.rdDepictor.Compute2DCoords(mol_copy)
+
+    if scores is not None and len(scores) > 0:
+        highlight_atoms = []
+        highlight_colors = {}
+        highlight_radii = {}
+        for idx in range(mol_copy.GetNumAtoms()):
+            w = float(scores[idx]) if idx < len(scores) else 0.0
+            if w >= 0.35:
+                highlight_atoms.append(idx)
+                intensity = (w - 0.35) / 0.65
+                highlight_colors[idx] = (0.95, max(0.15, 0.72 - 0.57 * intensity), 0.18, 0.55 + 0.35 * intensity)
+                highlight_radii[idx] = 0.28 + 0.18 * intensity
+        drawer.DrawMolecule(
+            mol_copy,
+            highlightAtoms=highlight_atoms,
+            highlightAtomColors=highlight_colors,
+            highlightAtomRadii=highlight_radii,
+        )
+    else:
+        drawer.DrawMolecule(mol_copy)
+
+    drawer.FinishDrawing()
+    png_bytes = drawer.GetDrawingText()
+    b64 = base64.b64encode(png_bytes).decode("ascii")
+    return f"data:image/png;base64,{b64}"
 
 
 def _draw_mol_with_saliency(mol: Chem.Mol, scores: np.ndarray, width: int = 440, height: int = 330) -> np.ndarray:
