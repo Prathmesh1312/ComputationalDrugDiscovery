@@ -106,6 +106,15 @@ class TestWebWorkbenchAPI(unittest.TestCase):
         self.assertIn("SSL-GraphGPS (Ours)", data["metrics_summary"])
         self.assertGreaterEqual(len(data["figures"]), 6)
 
+    def test_07_css_hidden_panels_do_not_block_pointer_events(self):
+        """Verify CSS does not overlap hidden=until-found panels on top of the active tab panel."""
+        res = self.client.get("/static/styles.css")
+        self.assertEqual(res.status_code, 200)
+        css = res.text
+        self.assertNotIn("grid-area: 1 / 1", css)
+        self.assertIn('.panels-stage > [role="tabpanel"][hidden]', css)
+        self.assertIn("pointer-events: none", css)
+
 
 if __name__ == "__main__":
     unittest.main()

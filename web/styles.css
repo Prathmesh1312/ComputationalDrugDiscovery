@@ -169,13 +169,14 @@ body {
   border-block-end: 2.5px solid var(--accent);
 }
 
-/* Panels share a single grid cell with zero gap and zero direct padding/border */
+/* Plain block container (zero gap, no grid-area overlap) so hidden="until-found"
+   panels collapse to 0px height without covering the active tab panel */
 .panels-stage {
-  display: grid;
+  display: block;
 }
 
-.panels-stage > [role="tabpanel"] {
-  grid-area: 1 / 1;
+.panels-stage > [role="tabpanel"][hidden] {
+  pointer-events: none;
 }
 
 .panel-body {

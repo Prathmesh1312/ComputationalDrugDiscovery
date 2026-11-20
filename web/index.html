@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ADMET GraphGPS Workbench</title>
-  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/styles.css?v=2">
 </head>
 <body>
   <header class="site-header">
@@ -111,7 +111,7 @@
                   <span class="badge badge-neutral" id="predict-latency">-- ms</span>
                 </div>
                 <div class="mol-frame">
-                  <img id="mol-image" alt="2D chemical structure rendering" src="">
+                  <img id="mol-image" alt="2D chemical structure rendering">
                 </div>
                 <div class="smiles-copy-bar">
                   <code id="canon-smiles" class="mono-truncate">--</code>
@@ -271,7 +271,7 @@
                   <span class="badge badge-accent" id="xai-pred-badge">Pred: --</span>
                 </div>
                 <div class="mol-frame tall">
-                  <img id="xai-image" alt="Molecule with gradient attribution highlighted atoms" src="">
+                  <img id="xai-image" alt="Molecule with gradient attribution highlighted atoms">
                 </div>
                 <div class="saliency-legend">
                   <span>0.00 Low</span>
@@ -448,6 +448,7 @@
         <!-- TAB 4: BENCHMARKS & ABLATION -->
         <div role="tabpanel" id="panel-benchmarks" aria-labelledby="tab-benchmarks" hidden="until-found">
           <div class="panel-body">
+            <div class="server-alert" id="benchmarks-alert" hidden></div>
             <div class="kpi-strip">
               <div class="kpi-card"><span>Standardized Dataset</span><strong id="bm-total">--</strong></div>
               <div class="kpi-card"><span>Disjoint Murcko Scaffolds</span><strong id="bm-scaffolds">--</strong></div>
@@ -493,6 +494,6 @@
     </div>
   </main>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=2"></script>
 </body>
 </html>

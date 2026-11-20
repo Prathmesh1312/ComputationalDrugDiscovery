@@ -160,6 +160,14 @@
     if (el.hasAttribute("aria-invalid")) syncValidationState(el, false);
   });
 
+  function setSmilesInput(inputId, smiles) {
+    const inp = document.getElementById(inputId);
+    if (!inp) return;
+    inp.value = smiles;
+    dirtyMap.set(inp, { interacted: true, blurred: false });
+    syncValidationState(inp, false, false);
+  }
+
   function validateFormBeforeFetch(formEl) {
     const inputs = Array.from(formEl.querySelectorAll("input[required]"));
     let allOk = true;
@@ -245,7 +253,7 @@
       });
 
       currentSmiles = data.graph_info.canonical_smiles;
-      document.getElementById("smiles-input").value = currentSmiles;
+      setSmilesInput("smiles-input", currentSmiles);
       document.getElementById("mol-image").src = data.image_data_uri;
       document.getElementById("canon-smiles").textContent = currentSmiles;
       document.getElementById("predict-latency").textContent = `${data.latency_ms} ms`;
@@ -312,23 +320,44 @@
 
   document.getElementById("copy-smiles-btn").addEventListener("click", async () => {
     const btn = document.getElementById("copy-smiles-btn");
+    let copied = false;
     try {
-      await navigator.clipboard.writeText(currentSmiles);
-      btn.textContent = "Copied";
-      setTimeout(() => { btn.textContent = "Copy"; }, 1200);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(currentSmiles);
+        copied = true;
+      }
     } catch {
-      btn.textContent = "Copy";
+      copied = false;
+    }
+    if (!copied) {
+      const ta = document.createElement("textarea");
+      ta.value = currentSmiles;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      }
+      document.body.removeChild(ta);
+    }
+    btn.textContent = copied ? "Copied" : "Copy";
+    if (copied) {
+      setTimeout(() => { btn.textContent = "Copy"; }, 1200);
     }
   });
 
   document.getElementById("goto-xai-btn").addEventListener("click", () => {
-    document.getElementById("xai-smiles-input").value = currentSmiles;
+    setSmilesInput("xai-smiles-input", currentSmiles);
     hasRunXai = false;
     selectTab(document.getElementById("tab-saliency"), false);
   });
 
   document.getElementById("goto-opt-btn").addEventListener("click", () => {
-    document.getElementById("opt-smiles-input").value = currentSmiles;
+    setSmilesInput("opt-smiles-input", currentSmiles);
     hasRunOpt = false;
     selectTab(document.getElementById("tab-optimizer"), false);
   });
@@ -351,7 +380,7 @@
       });
       hasRunXai = true;
       currentSmiles = data.canonical_smiles;
-      document.getElementById("xai-smiles-input").value = currentSmiles;
+      setSmilesInput("xai-smiles-input", currentSmiles);
       document.getElementById("xai-image").src = data.image_data_uri;
 
       const rawVal = data.predictions[task];
@@ -395,6 +424,18 @@
       document.getElementById("xai-smiles-input").value,
       document.getElementById("xai-task").value
     );
+  });
+
+  document.getElementById("xai-task").addEventListener("change", () => {
+    const form = document.getElementById("saliency-form");
+    const inp = document.getElementById("xai-smiles-input");
+    inp.value = inp.value.trim();
+    if (!inp.checkValidity()) {
+      validateFormBeforeFetch(form);
+      return;
+    }
+    syncValidationState(inp, false, false);
+    runSaliency(inp.value, document.getElementById("xai-task").value);
   });
 
   // =========================================================================
@@ -581,7 +622,7 @@
 
       hasRunOpt = true;
       currentSmiles = data.seed_smiles;
-      document.getElementById("opt-smiles-input").value = currentSmiles;
+      setSmilesInput("opt-smiles-input", currentSmiles);
 
       const bestCand = data.candidates[0];
       document.getElementById("kpi-total").textContent = String(data.total_candidates);
@@ -631,7 +672,7 @@
         xaiBtn.textContent = "Inspect in XAI";
         xaiBtn.addEventListener("click", () => {
           currentSmiles = c.smiles;
-          document.getElementById("xai-smiles-input").value = c.smiles;
+          setSmilesInput("xai-smiles-input", c.smiles);
           hasRunXai = false;
           selectTab(document.getElementById("tab-saliency"), false);
         });
@@ -671,7 +712,7 @@
         actBtn.textContent = "Profile";
         actBtn.addEventListener("click", () => {
           currentSmiles = c.smiles;
-          document.getElementById("smiles-input").value = c.smiles;
+          setSmilesInput("smiles-input", c.smiles);
           selectTab(document.getElementById("tab-profiler"), false);
           runPrediction(c.smiles);
         });
@@ -698,56 +739,67 @@
   // 7. Tab 4 — Benchmarks & Ablation
   // =========================================================================
   async function loadBenchmarks() {
-    const data = await apiJson("/api/benchmarks");
-    hasLoadedBenchmarks = true;
+    const alertEl = document.getElementById("benchmarks-alert");
+    if (alertEl) alertEl.hidden = true;
+    try {
+      const data = await apiJson("/api/benchmarks");
 
-    const ds = data.dataset_stats;
-    const ms = data.metrics_summary;
-    const ours = ms["SSL-GraphGPS (Ours)"];
-    const scratch = ms["GraphGPS-Scratch"];
+      const ds = data.dataset_stats;
+      const ms = data.metrics_summary;
+      const ours = ms["SSL-GraphGPS (Ours)"];
+      const scratch = ms["GraphGPS-Scratch"];
 
-    document.getElementById("bm-total").textContent = `${(ds.unlabeled_ssl_count + ds.admet_total_count).toLocaleString()} Mols`;
-    document.getElementById("bm-scaffolds").textContent = ds.unique_scaffolds.toLocaleString();
-    document.getElementById("bm-macro-auc").textContent = ours.aggregate.macro_roc_auc.toFixed(4);
-    const gainPp = (ours.aggregate.macro_roc_auc - scratch.aggregate.macro_roc_auc) * 100;
-    document.getElementById("bm-ssl-gain").textContent = `+${gainPp.toFixed(2)} pp`;
+      document.getElementById("bm-total").textContent = `${(ds.unlabeled_ssl_count + ds.admet_total_count).toLocaleString()} Mols`;
+      document.getElementById("bm-scaffolds").textContent = ds.unique_scaffolds.toLocaleString();
+      document.getElementById("bm-macro-auc").textContent = ours.aggregate.macro_roc_auc.toFixed(4);
+      const gainPp = (ours.aggregate.macro_roc_auc - scratch.aggregate.macro_roc_auc) * 100;
+      document.getElementById("bm-ssl-gain").textContent = `+${gainPp.toFixed(2)} pp`;
 
-    const tbody = document.getElementById("bm-table-body");
-    clearEl(tbody);
-    const order = ["RF-ECFP4", "Standard-GCN", "GraphGPS-Scratch", "SSL-GraphGPS (Ours)"];
-    for (const modelName of order) {
-      const m = ms[modelName];
-      if (!m) continue;
-      const tr = document.createElement("tr");
-      if (modelName === "SSL-GraphGPS (Ours)") tr.classList.add("row-highlight");
-      const th = makeCell("th", modelName);
-      th.scope = "row";
-      tr.appendChild(th);
-      tr.appendChild(makeCell("td", m.bioavailability.roc_auc.toFixed(4)));
-      tr.appendChild(makeCell("td", m.bbb.roc_auc.toFixed(4)));
-      tr.appendChild(makeCell("td", m.herg.roc_auc.toFixed(4)));
-      tr.appendChild(makeCell("td", m.aggregate.macro_roc_auc.toFixed(4)));
-      tr.appendChild(makeCell("td", `${m.qed.r2.toFixed(4)} (${m.qed.mae.toFixed(3)})`));
-      tr.appendChild(makeCell("td", `${m.sascore.r2.toFixed(4)} (${m.sascore.mae.toFixed(3)})`));
-      tr.appendChild(makeCell("td", m.aggregate.composite_val_score.toFixed(4)));
-      tbody.appendChild(tr);
-    }
+      const tbody = document.getElementById("bm-table-body");
+      clearEl(tbody);
+      const order = ["RF-ECFP4", "Standard-GCN", "GraphGPS-Scratch", "SSL-GraphGPS (Ours)"];
+      for (const modelName of order) {
+        const m = ms[modelName];
+        if (!m) continue;
+        const tr = document.createElement("tr");
+        if (modelName === "SSL-GraphGPS (Ours)") tr.classList.add("row-highlight");
+        const th = makeCell("th", modelName);
+        th.scope = "row";
+        tr.appendChild(th);
+        tr.appendChild(makeCell("td", m.bioavailability.roc_auc.toFixed(4)));
+        tr.appendChild(makeCell("td", m.bbb.roc_auc.toFixed(4)));
+        tr.appendChild(makeCell("td", m.herg.roc_auc.toFixed(4)));
+        tr.appendChild(makeCell("td", m.aggregate.macro_roc_auc.toFixed(4)));
+        tr.appendChild(makeCell("td", `${m.qed.r2.toFixed(4)} (${m.qed.mae.toFixed(3)})`));
+        tr.appendChild(makeCell("td", `${m.sascore.r2.toFixed(4)} (${m.sascore.mae.toFixed(3)})`));
+        tr.appendChild(makeCell("td", m.aggregate.composite_val_score.toFixed(4)));
+        tbody.appendChild(tr);
+      }
 
-    const gallery = document.getElementById("benchmark-gallery");
-    clearEl(gallery);
-    for (const fig of data.figures) {
-      const card = document.createElement("article");
-      card.className = "figure-card";
-      const h3 = document.createElement("h3");
-      h3.textContent = fig.title;
-      const p = document.createElement("p");
-      p.textContent = fig.caption;
-      const img = document.createElement("img");
-      img.src = fig.url;
-      img.alt = fig.title;
-      img.loading = "lazy";
-      card.append(h3, p, img);
-      gallery.appendChild(card);
+      const gallery = document.getElementById("benchmark-gallery");
+      clearEl(gallery);
+      for (const fig of data.figures) {
+        const card = document.createElement("article");
+        card.className = "figure-card";
+        const h3 = document.createElement("h3");
+        h3.textContent = fig.title;
+        const p = document.createElement("p");
+        p.textContent = fig.caption;
+        const img = document.createElement("img");
+        img.src = fig.url;
+        img.alt = fig.title;
+        img.loading = "lazy";
+        card.append(h3, p, img);
+        gallery.appendChild(card);
+      }
+
+      hasLoadedBenchmarks = true;
+    } catch (err) {
+      hasLoadedBenchmarks = false;
+      if (alertEl) {
+        alertEl.textContent = `Error loading benchmarks: ${err.message}`;
+        alertEl.hidden = false;
+      }
     }
   }
 
@@ -765,15 +817,15 @@
 
       presetList = presetsData.presets;
       renderPresetBar("profiler-presets", (sm) => {
-        document.getElementById("smiles-input").value = sm;
+        setSmilesInput("smiles-input", sm);
         runPrediction(sm);
       });
       renderPresetBar("xai-presets", (sm) => {
-        document.getElementById("xai-smiles-input").value = sm;
+        setSmilesInput("xai-smiles-input", sm);
         runSaliency(sm, document.getElementById("xai-task").value);
       });
       renderPresetBar("opt-presets", (sm) => {
-        document.getElementById("opt-smiles-input").value = sm;
+        setSmilesInput("opt-smiles-input", sm);
         runOptimization();
       });
 
