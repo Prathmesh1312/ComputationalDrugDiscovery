@@ -36,7 +36,7 @@ course_project/
 ├── GLOSSARY.md                        # Visual terminology & concept glossary
 ├── PRESENTATION_DECK.md               # Slide deck & faculty viva Q&A
 ├── deliverables/                      # Generated PowerPoint presentation & speaker scripts
-├── paper/                             # IEEE conference research paper & LaTeX figures
+├── paper/                             # IEEE conference research paper (.pdf, editable .docx, .tex, .bib)
 ├── requirements.txt                   # Python dependencies
 ├── web/                               # Light-theme 4-tab demo UI (index.html, styles.css, app.js)
 ├── data/
@@ -55,12 +55,14 @@ course_project/
 │   ├── 2_finetune_admet.py            # Stage 2: Masked multi-task fine-tuning (ssl/scratch/gcn)
 │   ├── 3_lead_optimization.py         # Stage 3: Evolutionary Pareto optimization & XAI saliency
 │   ├── 4_evaluate_and_ablation.py     # Stage 4: Held-out benchmark & publication plots
+│   ├── build_ieee_docx.py             # Build editable IEEE two-column Word (.docx) research paper
 │   └── run_all.py                     # End-to-end reproducible pipeline runner
 ├── notebooks/
 │   └── 01_explore_and_demo.ipynb      # Interactive 6-part demonstration & XAI notebook
 └── tests/
     ├── test_course_project.py         # 14-test ML/chemistry unit & integration suite
-    └── test_web_api.py                # 6-test FastAPI 4-tab demo backend integration suite
+    ├── test_web_api.py                # 6-test FastAPI 4-tab demo backend integration suite
+    └── test_ieee_docx.py              # 6-test IEEE .docx OOXML, OMML, layout & metric suite
 ```
 
 ---
@@ -73,7 +75,7 @@ Run all commands from the `course_project/` root directory using the project vir
 # 1. Launch Interactive 4-Tab Demo Web UI (http://127.0.0.1:8000)
 ./env/bin/python app.py
 
-# 2. Run all 20 unit & integration tests
+# 2. Run all 26 unit & integration tests
 PYTHONPATH=. ./env/bin/python -m unittest discover -s tests -v
 
 # 3. Run the full end-to-end pipeline (Stages 0 -> 1 -> 2 -> 4 -> 3)

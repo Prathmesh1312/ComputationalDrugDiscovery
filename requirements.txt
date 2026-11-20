@@ -13,3 +13,7 @@ tqdm>=4.65.0
 fastapi>=0.115.0
 uvicorn>=0.30.0
 
+# Word Document Generation
+python-docx>=1.1.0
+
+
