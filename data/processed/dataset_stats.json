@@ -1,0 +1,71 @@
+{
+  "unlabeled_ssl_count": 5000,
+  "admet_total_count": 5007,
+  "unique_scaffolds": 3137,
+  "splits": {
+    "train": {
+      "count": 4005,
+      "unique_scaffolds": 2135,
+      "bioavailability_count": 536,
+      "bioavailability_pos_rate": 0.7798507462686567,
+      "bbb_count": 1611,
+      "bbb_pos_rate": 0.7585350713842334,
+      "herg_count": 2252,
+      "herg_pos_rate": 0.5421847246891652
+    },
+    "val": {
+      "count": 500,
+      "unique_scaffolds": 500,
+      "bioavailability_count": 56,
+      "bioavailability_pos_rate": 0.6785714285714286,
+      "bbb_count": 157,
+      "bbb_pos_rate": 0.802547770700637,
+      "herg_count": 317,
+      "herg_pos_rate": 0.555205047318612
+    },
+    "test": {
+      "count": 502,
+      "unique_scaffolds": 502,
+      "bioavailability_count": 44,
+      "bioavailability_pos_rate": 0.75,
+      "bbb_count": 153,
+      "bbb_pos_rate": 0.8235294117647058,
+      "herg_count": 330,
+      "herg_pos_rate": 0.48484848484848486
+    }
+  },
+  "tasks": {
+    "bioavailability": {
+      "count": 636,
+      "pos_count": 489,
+      "neg_count": 147,
+      "pos_rate": 0.7688679245283019
+    },
+    "bbb": {
+      "count": 1921,
+      "pos_count": 1474,
+      "neg_count": 447,
+      "pos_rate": 0.76730869338886
+    },
+    "herg": {
+      "count": 2899,
+      "pos_count": 1557,
+      "neg_count": 1342,
+      "pos_rate": 0.5370817523283891
+    },
+    "qed": {
+      "count": 5007,
+      "mean": 0.595225044937088,
+      "std": 0.197273113333925,
+      "min": 0.03547,
+      "max": 0.94589
+    },
+    "sascore": {
+      "count": 5007,
+      "mean": 3.226428390253645,
+      "std": 0.939869924682909,
+      "min": 1.0,
+      "max": 7.98574
+    }
+  }
+}
